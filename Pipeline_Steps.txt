@@ -1,0 +1,28 @@
+Steps to be achieved as part of this activity:
+
+We are mantaining a Control table which contains the list of tables for which data needs to be extracted in ADLS Storage.  
+
+a. Lookup activity : To query the Process Control table and get the list of tables that needs to be pulled based on the FLAG (Active_Flag='Y')
+    SELECT Table_Schema,Table_Name,Last_Updated_Dt FROM targetDatabase.Process_Control WHERE Active_Flag='Y'
+
+b. foreach activity: Get the list of table names from the previous activity (i.e. Lookup) and iterate with the below set of steps:
+    a. Lookup activity: To get the max(date) from the source table. This is written dynamically in the Lookup : Query (expression builder).   
+
+    b. Copy activity: Contruct a dymanic query to extract incremental records from the source database table. The query will exract incremental records based on the date condition. 
+        𝘚𝘌𝘓𝘌𝘊𝘛 * 𝘍𝘙𝘖𝘔 𝘚𝘰𝘶𝘳𝘤𝘦.𝘛𝘢𝘣𝘭𝘦_𝘕𝘢𝘮𝘦 𝘛1 𝘞𝘏𝘌𝘙𝘌 𝘛1.𝘥𝘢𝘵𝘦 > (𝘚𝘵𝘦𝘱 2 𝘥𝘢𝘵𝘦: 𝘓𝘢𝘴𝘵_𝘜𝘱𝘥𝘢𝘵𝘦𝘥_𝘋𝘵) 𝘢𝘯𝘥 𝘛1.𝘥𝘢𝘵𝘦 <= (𝘚𝘵𝘦𝘱 3: 𝘔𝘢𝘹 𝘥𝘢𝘵𝘦).
+
+    c. Stored Procedure activity: This calls the Stored Procedure to update the date in the Process Control table entry. 
+
+c. Stored Procedure activity: This Stored procedure is used to add an entry in the LOG table i.e. ADF_Process_Logs. 
+
+
+Note: 
+a. While loading the extracted data into ADLS, we have used parameterization in the DataSet to load the files in Date hierarchy i.e. YYYY/DD/MM/HH/MM/SS/ 
+    Expression builde query (for Ref): 
+        @concat(dataset().Directory_Name,'/',
+        formatDateTime(utcNow(),'yyyy'),'/',
+        formatDateTime(utcNow(),'MM'),'/',
+        formatDateTime(utcNow(),'dd'),'/',
+        formatDateTime(utcNow(),'hh'),'/',
+        formatDateTime(utcNow(),'MM'),'/',
+        formatDateTime(utcNow(),'ss')) 
